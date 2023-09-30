@@ -24,23 +24,23 @@ def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
 
     for i in range(0, num_nodes):
         if node_type == 'server':
-            server_spec = util.load_yaml('yaml/pods/server-pod.yml', prefix)
-            env = server_spec['spec']['containers'][0]['env']
-            util.replace_yaml_val(env, 'SERVER_ID', str(serverUID))
-            server_spec['metadata']['name'] = 'server-pod-%d' % serverUID
-            server_spec['metadata']['labels']['role'] = 'server-%d' % serverUID
-            k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=server_spec)
-            util.check_wait_pod_status(k8s_client, 'role=server-%d' % serverUID, 'Running')
+            #server_spec = util.load_yaml('yaml/pods/server-pod.yml', prefix)
+            #env = server_spec['spec']['containers'][0]['env']
+            #util.replace_yaml_val(env, 'SERVER_ID', str(serverUID))
+            #server_spec['metadata']['name'] = 'server-pod-%d' % serverUID
+            #server_spec['metadata']['labels']['role'] = 'server-%d' % serverUID
+            #k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=server_spec)
+            #util.check_wait_pod_status(k8s_client, 'role=server-%d' % serverUID, 'Running')
             result = frontend.addServer(serverUID)
             serverUID += 1
         elif node_type == 'client':
-            client_spec = util.load_yaml('yaml/pods/client-pod.yml', prefix)
-            env = client_spec['spec']['containers'][0]['env']
-            util.replace_yaml_val(env, 'CLIENT_ID', str(clientUID))
-            client_spec['metadata']['name'] = 'client-pod-%d' % clientUID
-            client_spec['metadata']['labels']['role'] = 'client-%d' % clientUID
-            k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=client_spec)
-            util.check_wait_pod_status(k8s_client, 'role=client-%d' % clientUID, 'Running')
+            #client_spec = util.load_yaml('yaml/pods/client-pod.yml', prefix)
+            #env = client_spec['spec']['containers'][0]['env']
+            #util.replace_yaml_val(env, 'CLIENT_ID', str(clientUID))
+            #client_spec['metadata']['name'] = 'client-pod-%d' % clientUID
+            #client_spec['metadata']['labels']['role'] = 'client-%d' % clientUID
+            #k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=client_spec)
+            #util.check_wait_pod_status(k8s_client, 'role=client-%d' % clientUID, 'Running')
             clientList[clientUID] = xmlrpc.client.ServerProxy(baseAddr + str(baseClientPort + clientUID))
             clientUID += 1
         else:
@@ -87,10 +87,10 @@ def init_cluster(k8s_client, k8s_apps_client, num_client, num_server, ssh_key, p
     global frontend
 
     print('Creating a frontend pod...')
-    frontend_spec = util.load_yaml('yaml/pods/frontend-pod.yml', prefix)
-    env = frontend_spec['spec']['containers'][0]['env']
-    k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=frontend_spec)
-    util.check_wait_pod_status(k8s_client, 'role=frontend', 'Running')
+    #frontend_spec = util.load_yaml('yaml/pods/frontend-pod.yml', prefix)
+    #env = frontend_spec['spec']['containers'][0]['env']
+    #k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=frontend_spec)
+    #util.check_wait_pod_status(k8s_client, 'role=frontend', 'Running')
     frontend = xmlrpc.client.ServerProxy(baseAddr + str(baseFrontendPort))
 
     print('Creating server pods...')
@@ -130,13 +130,13 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
         elif args[0] == 'terminate':
             terminate = True
         elif args[0] == 'play':
-            print("Command is play!")
+            #print("Command is play!")
             playfile=str(args[1])
             try:
                 with open(playfile) as f:
                     commandstrings=f.readlines()
                     for playitem in commandstrings:
-                        print("Playitem is", playitem.strip("\n"))
+                        #print("Playitem is", playitem.strip("\n"))
                         processcommands(k8s_client,k8s_apps_client,prefix,playitem.strip("\n"))
             except:
                 print("Invalid command")
@@ -170,13 +170,14 @@ def processcommands(k8s_client, k8s_apps_client, prefix, cmd):
         elif args[0] == 'terminate':
             return
         elif args[0] == 'play':
-            print("Command is play!")
+            #print("Command is play!")
             playfile=str(args[1])
             try:
                 with open(playfile) as f:
                     commandstrings=f.readlines()
                     for playitem in commandstrings:
-                        print("Playitem is", playitem.strip("\n"))
+                        pass
+                        #print("Playitem is", playitem.strip("\n"))
             except:
                 print("Invalid command")
         else:
@@ -210,7 +211,8 @@ if __name__ == '__main__':
 
     prefix = os.environ['KVS_HOME']
 
-    k8s_client, k8s_apps_client = util.init_k8s()
+    #k8s_client, k8s_apps_client = util.init_k8s()
+    k8s_client, k8s_apps_client = 0,0
 
     init_cluster(k8s_client, k8s_apps_client, args.client[0], args.server[0], args.sshkey, prefix)
 

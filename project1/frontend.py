@@ -54,7 +54,7 @@ class FrontendRPCServer:
         kvsServers.pop(serverId)
         return result
 
-server = SimpleThreadedXMLRPCServer(("localhost", 8001))
+server = SimpleThreadedXMLRPCServer(("localhost", 8001),logRequests=False)
 server.register_instance(FrontendRPCServer())
 
 server.serve_forever()

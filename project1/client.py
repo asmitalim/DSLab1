@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     clientId = args.clientId[0]
 
-    server = xmlrpc.server.SimpleXMLRPCServer(("localhost", basePort + clientId))
+    server = xmlrpc.server.SimpleXMLRPCServer(("localhost", basePort + clientId),logRequests=False)
     server.register_instance(ClientRPCServer())
 
     server.serve_forever()
