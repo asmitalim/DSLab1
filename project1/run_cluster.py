@@ -129,8 +129,60 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
             printKVPairs(serverId)
         elif args[0] == 'terminate':
             terminate = True
+        elif args[0] == 'play':
+            print("Command is play!")
+            playfile=str(args[1])
+            try:
+                with open(playfile) as f:
+                    commandstrings=f.readlines()
+                    for playitem in commandstrings:
+                        print("Playitem is", playitem.strip("\n"))
+                        processcommands(k8s_client,k8s_apps_client,prefix,playitem.strip("\n"))
+            except:
+                printf("Invalid command")
         else:
             print("Unknown command")
+
+def processcommands(k8s_client, k8s_apps_client, prefix, cmd):
+        args = cmd.split(':')
+        if args[0] == 'addClient':
+            addClient(k8s_client, k8s_apps_client, prefix)
+        elif args[0] == 'addServer':
+            addServer(k8s_client, k8s_apps_client, prefix)
+        elif args[0] == 'listServer':
+            listServer()
+        elif args[0] == 'killServer':
+            serverId = int(args[1])
+            killServer(k8s_client, k8s_apps_client, serverId)
+        elif args[0] == 'shutdownServer':
+            serverId = int(args[1])
+            shutdownServer(k8s_client, k8s_apps_client, serverId)
+        elif args[0] == 'put':
+            key = int(args[1])
+            value = int(args[2])
+            put(key, value)
+        elif args[0] == 'get':
+            key = int(args[1])
+            get(key)
+        elif args[0] == 'printKVPairs':
+            serverId = int(args[1])
+            printKVPairs(serverId)
+        elif args[0] == 'terminate':
+            return
+        elif args[0] == 'play':
+            print("Command is play!")
+            playfile=str(args[1])
+            try:
+                with open(playfile) as f:
+                    commandstrings=f.readlines()
+                    for playitem in commandstrings:
+                        print("Playitem is", playitem.strip("\n"))
+            except:
+                printf("Invalid command")
+        else:
+            print("Unknown command")
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='''Create a KVS cluster using Kubernetes
