@@ -6,7 +6,7 @@ import sys
 serverId = 0
 basePort = 9000
 localStore={}
-prepareCommit={}
+prepareLog={"tid":None, "key": None, "value":None } #tid:(key:value)
 
 class KVSRPCServer:
     # TODO: You need to implement details for these functions.
@@ -25,6 +25,7 @@ class KVSRPCServer:
 
     ## printKVPairs: Print all the key-value pairs at this server.
     def printKVPairs(self):
+        global localStore
         retval=f"ListKVPairs: Server:{serverId} "
         for key,val in localStore.items():
             retval+=f"{key}:{val}\n"
@@ -37,7 +38,29 @@ class KVSRPCServer:
     
     def heartbeatfunction(self):
         return True
-
+    
+    def prepare(self,tid,key,value):
+        global prepareLog
+        try: 
+            prepareLog["tid"]=tid
+            prepareLog["key"]=key
+            prepareLog["value"]=value
+        except Exception as e:
+            print(f"Error:{e}")
+            return False
+        return True
+    
+    def printPrepareLog(self):
+        global prepareLog
+        return str(prepareLog)
+    
+    def commit(self,tid,key,value):
+        global prepareLog
+        if prepareLog["tid"]==tid:
+            self.put(key,value)
+        else:
+            return False
+        return True
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = '''To be added.''')
 
