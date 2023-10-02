@@ -139,6 +139,8 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
             terminate = True
         elif args[0]== 'heartbeat':
             frontend.updateValidServers()
+        elif args[0]== 'printlog':
+            print(frontend.printTransactionLog())
         elif args[0] == 'play':
             #print("Command is play!")
             playfile=str(args[1])

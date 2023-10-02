@@ -11,6 +11,7 @@ baseServerPort = 9000
 upServers=[] #list of serverIds with status
 primaryServer= None
 tid=0
+transactionLog=[]
 
 class SimpleThreadedXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
         pass
@@ -64,7 +65,7 @@ class FrontendRPCServer:
             except:
                 print("Dangerous system state, shutdown server")
                 return "ERR_COMMIT"
-
+        transactionLog.append((tid,key,value))
         return "put:"+str(key)+":"+str(value)
 
         #serverId = key % len(kvsServers)
@@ -85,7 +86,6 @@ class FrontendRPCServer:
     ## addServer: This function registers a new server with the
     ## serverId to the cluster membership.
     def addServer(self, serverId):
-
         kvsServers[serverId] = xmlrpc.client.ServerProxy(baseAddr + str(baseServerPort + serverId))
         return "Success"
 
@@ -104,6 +104,10 @@ class FrontendRPCServer:
         result = kvsServers[serverId].shutdownServer()
         kvsServers.pop(serverId)
         return result
+    
+    def printTransactionLog(self):
+        global transactionLog
+        return transactionLog
 
 server = SimpleThreadedXMLRPCServer(("localhost", 8001),logRequests=False)
 server.register_instance(FrontendRPCServer())
