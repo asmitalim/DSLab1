@@ -6,6 +6,7 @@ import sys
 serverId = 0
 basePort = 9000
 localStore={}
+prepareCommit={}
 
 class KVSRPCServer:
     # TODO: You need to implement details for these functions.
@@ -28,11 +29,14 @@ class KVSRPCServer:
         for key,val in localStore.items():
             retval+=f"{key}:{val}\n"
         #return "[Server " + str(serverId) + "] Receive a request printing all KV pairs stored in this server"
-        return retval
+        return "printKVPairs"+retval
     
     ## shutdownServer: Terminate the server itself normally.
     def shutdownServer(self):
         sys.exit("Shutting down...")
+    
+    def heartbeatfunction(self):
+        return True
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = '''To be added.''')

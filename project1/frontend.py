@@ -1,22 +1,41 @@
 import xmlrpc.client
 import xmlrpc.server
+import datetime
 from socketserver import ThreadingMixIn
 from xmlrpc.server import SimpleXMLRPCServer
+import socket
 
 kvsServers = dict()
 baseAddr = "http://localhost:"
 baseServerPort = 9000
+validServers=[] #list of serverIds with status
 
 class SimpleThreadedXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
         pass
 
 class FrontendRPCServer:
+    timeSinceLastCheck=0
     # TODO: You need to implement details for these functions.
 
     ## put: This function routes requests from clients to proper
     ## servers that are responsible for inserting a new key-value
     ## pair or updating an existing one.
+    def updateValidServers(self):
+        for srvid,srv in kvsServers.items():
+            socket.setdefaulttimeout(1)  
+            try:
+                ans=srv.heartbeatfunction()
+                print(f"{ans} from {srvid} \n")
+            except:
+                print(f"Server {srvid}:{srv} unreachable")
+            socket.setdefaulttimeout(None)  
+        return "Okay"
+
+        
     def put(self, key, value):
+        now = datetime.datetime.now()
+        #if((now-self.timeSinceLastCheck).total_seconds()>1):
+            #self.updateValidServers()
         serverId = key % len(kvsServers)
         return kvsServers[serverId].put(key, value)
 
@@ -35,6 +54,7 @@ class FrontendRPCServer:
     ## addServer: This function registers a new server with the
     ## serverId to the cluster membership.
     def addServer(self, serverId):
+
         kvsServers[serverId] = xmlrpc.client.ServerProxy(baseAddr + str(baseServerPort + serverId))
         return "Success"
 

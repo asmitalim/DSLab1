@@ -1,7 +1,7 @@
 import argparse
 import os
 import subprocess
-
+import time
 import random
 import xmlrpc.client
 
@@ -21,7 +21,6 @@ clientList = dict()
 def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
     global clientUID
     global serverUID
-
     for i in range(0, num_nodes):
         if node_type == 'server':
             #server_spec = util.load_yaml('yaml/pods/server-pod.yml', prefix)
@@ -31,6 +30,9 @@ def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
             #server_spec['metadata']['labels']['role'] = 'server-%d' % serverUID
             #k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=server_spec)
             #util.check_wait_pod_status(k8s_client, 'role=server-%d' % serverUID, 'Running')
+            os.system(f"./runserver.sh {serverUID}") 
+            time.sleep(1)
+            print(f"We added server: {serverUID}")
             result = frontend.addServer(serverUID)
             serverUID += 1
         elif node_type == 'client':
@@ -41,6 +43,9 @@ def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
             #client_spec['metadata']['labels']['role'] = 'client-%d' % clientUID
             #k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=client_spec)
             #util.check_wait_pod_status(k8s_client, 'role=client-%d' % clientUID, 'Running')
+            os.system(f"./runclient.sh {clientUID}") 
+            time.sleep(1)
+            print(f"We added server: {clientUID}")
             clientList[clientUID] = xmlrpc.client.ServerProxy(baseAddr + str(baseClientPort + clientUID))
             clientUID += 1
         else:
@@ -87,6 +92,9 @@ def init_cluster(k8s_client, k8s_apps_client, num_client, num_server, ssh_key, p
     global frontend
 
     print('Creating a frontend pod...')
+    os.system(f"./runfrontend.sh") 
+    time.sleep(1)
+    print("Running front end")
     #frontend_spec = util.load_yaml('yaml/pods/frontend-pod.yml', prefix)
     #env = frontend_spec['spec']['containers'][0]['env']
     #k8s_client.create_namespaced_pod(namespace=util.NAMESPACE, body=frontend_spec)
@@ -129,6 +137,8 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
             printKVPairs(serverId)
         elif args[0] == 'terminate':
             terminate = True
+        elif args[0]== 'heartbeat':
+            frontend.updateValidServers()
         elif args[0] == 'play':
             #print("Command is play!")
             playfile=str(args[1])
