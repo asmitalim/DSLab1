@@ -4,11 +4,12 @@ import datetime
 from socketserver import ThreadingMixIn
 from xmlrpc.server import SimpleXMLRPCServer
 import socket
+import time
 
-kvsServers = dict()
+kvsServers = dict() #all the servers which were allocated
 baseAddr = "http://localhost:"
 baseServerPort = 9000
-upServers=[] #list of serverIds with status
+upServers=[] #list of serverIds which are reachable and valid
 primaryServer= None
 tid=0
 transactionLog=[]
@@ -24,14 +25,19 @@ class FrontendRPCServer:
     ## servers that are responsible for inserting a new key-value
     ## pair or updating an existing one.
     def updateValidServers(self):
+    #returns a list of [srvids,srvs] which are up
+    #TODO:make this a queue
         for srvid,srv in kvsServers.items():
             socket.setdefaulttimeout(1)  
             try:
                 ans=srv.heartbeatfunction()
                 print(f"{ans} from {srvid} \n")
-                upServers.append(srvid)
+                if srvid not in upServers:
+                    upServers.append(srvid)
             except:
                 print(f"Server {srvid}:{srv} unreachable")
+                if srvid in upServers:
+                    upServers.remove(srvid)
 
             socket.setdefaulttimeout(None)  
         return "Okay"
@@ -86,8 +92,11 @@ class FrontendRPCServer:
     ## addServer: This function registers a new server with the
     ## serverId to the cluster membership.
     def addServer(self, serverId):
-        kvsServers[serverId] = xmlrpc.client.ServerProxy(baseAddr + str(baseServerPort + serverId))
-        return "Success"
+        temp = xmlrpc.client.ServerProxy(baseAddr + str(baseServerPort + serverId))
+        res=temp.applyLog(transactionLog)
+        kvsServers[serverId]=temp
+        self.updateValidServers()
+        return res
 
     ## listServer: This function prints out a list of servers that
     ## are currently active/alive inside the cluster.
@@ -101,9 +110,14 @@ class FrontendRPCServer:
     ## a server matched with the specified serverId to let the corresponding
     ## server terminate normally.
     def shutdownServer(self, serverId):
-        result = kvsServers[serverId].shutdownServer()
+        try:
+            kvsServers[serverId].shutdownServer()
+            time.sleep(1)
+        except Exception as e:
+            print(f"{e}")
+        self.updateValidServers()
         kvsServers.pop(serverId)
-        return result
+        return "Server shutdown"
     
     def printTransactionLog(self):
         global transactionLog

@@ -2,6 +2,7 @@ import argparse
 import xmlrpc.client
 import xmlrpc.server
 import sys
+import os
 
 serverId = 0
 basePort = 9000
@@ -34,7 +35,7 @@ class KVSRPCServer:
     
     ## shutdownServer: Terminate the server itself normally.
     def shutdownServer(self):
-        sys.exit("Shutting down...")
+        os._exit(1)
     
     def heartbeatfunction(self):
         return True
@@ -61,6 +62,21 @@ class KVSRPCServer:
         else:
             return False
         return True
+    
+    def applyLog(self, transactionLog):
+        global localStore
+        global prepareLog
+        #TODO: check if local and prepare logs are empty
+        localStore={}
+        prepareLog={}
+        for logs in transactionLog:
+            k=logs[1]
+            v=logs[2]
+            localStore[k]= v
+        return str(localStore)
+    
+
+            
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = '''To be added.''')
 

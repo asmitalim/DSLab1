@@ -34,6 +34,7 @@ def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
             time.sleep(1)
             print(f"We added server: {serverUID}")
             result = frontend.addServer(serverUID)
+            print(f"Server added, transaction log of server: {result}")
             serverUID += 1
         elif node_type == 'client':
             #client_spec = util.load_yaml('yaml/pods/client-pod.yml', prefix)
@@ -53,10 +54,11 @@ def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
             exit()
 
 def remove_node(k8s_client, k8s_apps_client, node_type, node_id):
-    name = node_type + '-pod-%d' % node_id
-    selector = 'role=' + node_type + '-%d' % node_id
-    k8s_client.delete_namespaced_pod(name, namespace=util.NAMESPACE)
-    util.check_wait_pod_status(k8s_client, selector, 'Terminating')
+    print("Shutting down server..")
+    #name = node_type + '-pod-%d' % node_id
+    #selector = 'role=' + node_type + '-%d' % node_id
+    #k8s_client.delete_namespaced_pod(name, namespace=util.NAMESPACE)
+    #util.check_wait_pod_status(k8s_client, selector, 'Terminating')
 
 def addClient(k8s_client, k8s_apps_client, prefix):
     add_nodes(k8s_client, k8s_apps_client, 'client', 1, prefix)
@@ -133,8 +135,11 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
             key = int(args[1])
             get(key)
         elif args[0] == 'printKVPairs':
-            serverId = int(args[1])
-            printKVPairs(serverId)
+            if len(args)==2:
+                serverId = int(args[1])
+                printKVPairs(serverId)
+            else:
+                print("Uses: printKVPairs:<serverid>")
         elif args[0] == 'terminate':
             terminate = True
         elif args[0]== 'heartbeat':
