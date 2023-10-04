@@ -17,6 +17,7 @@ serverUID = 0
 
 frontend = None
 clientList = dict()
+randdict= dict()
 
 def add_nodes(k8s_client, k8s_apps_client, node_type, num_nodes, prefix=None):
     global clientUID
@@ -84,7 +85,7 @@ def put(key, value):
 
 def get(key):
     result = clientList[random.randint(1, len(clientList)) % len(clientList)].get(key)
-    print(result)
+    return result
 
 def printKVPairs(serverId):
     result = frontend.printKVPairs(serverId)
@@ -162,13 +163,14 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
 
 
 def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
+    global randdict
+    randdict={}
     iopscount=0
-    maxindx=20000
+    maxindx=100000
     failpercent=10
     starttime=time.time()
     terminate=False
     sum=0
-    randdict={}
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
         val=randomint+1
@@ -185,6 +187,48 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
         sum+=val
     res=frontend.getAllSums()
     print(f"All sums: {res[0]} No of servers: {res[1]} Sums: {res[2]/res[1]} Local sum: {sum}")
+    print(f"Iops per second {iopscount/difftime}")
+    return
+
+def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
+    global randdict
+    iopscount=0
+    maxindx=100000
+    failpercent=10
+    starttime=time.time()
+    terminate=False
+    sum=0
+    errcount=0
+    count=0
+    while terminate != True and iopscount<maxindx*4:
+        randomint=random.randint(0,maxindx-1)
+        strval=get(randomint)
+        val=strval.split(":")[1]
+        if val=="ERR_KEY" and randomint in randdict:
+            print(f"Problem ide! Key:{randomint} Val:{strval}")
+            errcount+=1
+        elif randomint in randdict:
+            temp=randdict[randomint]
+            if(temp==int(val)):
+                count+=1
+        else:
+            if val=="ERR_KEY":
+                count+=1
+            else:
+                errcount+=1
+
+        curtime=time.time()
+        difftime=curtime-starttime
+        if iopscount%100==0:
+            print(f"Iopscount:{iopscount}, Difftime:{difftime}")
+        if(curtime-starttime>10.00):
+            terminate=True
+        iopscount+=1
+    #for key,val in randdict.items():
+        #sum+=val
+    print(f"Error count:{errcount} Success count {count} Loop counts: {iopscount}")
+    #res=frontend.getAllSums()
+    #print(f"All sums: {res[0]} No of servers: {res[1]} Sums: {res[2]/res[1]} Local sum: {sum}")
     print(f"Iops per second {iopscount/difftime}")
     return
 
@@ -314,3 +358,5 @@ if __name__ == '__main__':
 
     #event_trigger(k8s_client, k8s_apps_client, prefix)
     runfunctionaltest(k8s_client, k8s_apps_client, prefix)
+    runfunctionaltest2(k8s_client, k8s_apps_client, prefix)
+

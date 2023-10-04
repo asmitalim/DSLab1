@@ -21,8 +21,8 @@ class KVSRPCServer:
     ## get: Get the value associated with the given key.
     def get(self, key):
         val=localStore.get(key,"ERR_KEY")
-        return "[Server " + str(serverId) + "] Receive a get request: " +str(key) +":"+str(val)
-        
+        #return "[Server " + str(serverId) + "] Receive a get request: " +str(key) +":"+str(val)
+        return f"{key}:{val}"
 
     ## printKVPairs: Print all the key-value pairs at this server.
     def printKVPairs(self):
