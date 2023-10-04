@@ -30,55 +30,51 @@ class FrontendRPCServer:
     def updateValidServers(self):
     #returns a list of [srvids,srvs] which are up
     #TODO:make this a queue
-        for srvid,srv in kvsServers.items():
-            socket.setdefaulttimeout(1)  
-            try:
-                ans=srv.heartbeatfunction()
-                #print(f"{ans} from {srvid} \n")
-                #if srvid not in upServers:
-                    #upServers.append(srvid)
-            except:
-                print(f"Server {srvid}:{srv} unreachable")
-                #if srvid in upServers:
-                    #upServers.remove(srvid)
-                with lock:
+        with lock:
+            for srvid,srv in kvsServers.items():
+                socket.setdefaulttimeout(1)  
+                try:
+                    ans=srv.heartbeatfunction()
+                    #print(f"{ans} from {srvid} \n")
+                except:
+                    print(f"Server {srvid}:{srv} unreachable")
                     kvsServers.pop(srvid)
 
-            socket.setdefaulttimeout(None)  
+                socket.setdefaulttimeout(None)  
         return "Okay"
 
         
     def put(self, key, value):
-        global primaryServer
         global tid
         now = datetime.datetime.now()
         self.updateValidServers()
         #if((now-self.timeSinceLastCheck).total_seconds()>1):
             #self.updateValidServers()
         #if len(upServers) > 0:
-        tid+=1
-        flag=True
-        ans=[]
-        n=len(kvsServers)
-        for s,srv in kvsServers.items():
-            ans.append(srv.prepare(tid,key,value))
-            #print("PrepareLog"+srv.printPrepareLog())
-        if len(ans)==n:
-            for res in ans:
-                if res==False:
-                    flag=False
-        if flag==False or len(ans)!= n:
-            print("Put failed!")
-            return "ERR_PREPARE"
+        with lock:
+            tid+=1
+            flag=True
+            ans=[]
+            n=len(kvsServers)
+            for s,srv in kvsServers.items():
+                ans.append(srv.prepare(tid,key,value))
+                #print("PrepareLog"+srv.printPrepareLog())
+            if len(ans)==n:
+                for res in ans:
+                    if res==False:
+                        flag=False
+            if flag==False or len(ans)!= n:
+                print("Put failed!")
+                return "ERR_PREPARE"
 
-        for s,srv in kvsServers.items():
-            try:
-                res=srv.commit(tid,key,value)
-            except:
-                print("Dangerous system state, shutdown server")
-                kvsServers.pop(s)
-                return "ERR_COMMIT"
-        transactionLog.append((tid,key,value))
+            for s,srv in kvsServers.items():
+                try:
+                    res=srv.commit(tid,key,value)
+                except:
+                    print("Dangerous system state, shutdown server")
+                    kvsServers.pop(s)
+                    return "ERR_COMMIT"
+            transactionLog.append((tid,key,value))
         return "put:"+str(key)+":"+str(value)
 
         #serverId = key % len(kvsServers)
@@ -107,7 +103,8 @@ class FrontendRPCServer:
     def addServer(self, serverId):
         temp = xmlrpc.client.ServerProxy(baseAddr + str(baseServerPort + serverId))
         res=temp.applyLog(transactionLog)
-        kvsServers[serverId]=temp
+        with lock:
+            kvsServers[serverId]=temp
         return res
 
     ## listServer: This function prints out a list of servers that
@@ -141,7 +138,8 @@ class FrontendRPCServer:
             time.sleep(1)
         except Exception as e:
             print(f"{e}")
-        kvsServers.pop(serverId)
+        with lock:
+            kvsServers.pop(serverId)
         return "Server shutdown"
     
     def printTransactionLog(self):
