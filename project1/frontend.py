@@ -34,7 +34,7 @@ class FrontendRPCServer:
             socket.setdefaulttimeout(1)  
             try:
                 ans=srv.heartbeatfunction()
-                print(f"{ans} from {srvid} \n")
+                #print(f"{ans} from {srvid} \n")
                 #if srvid not in upServers:
                     #upServers.append(srvid)
             except:
@@ -62,7 +62,7 @@ class FrontendRPCServer:
         n=len(kvsServers)
         for s,srv in kvsServers.items():
             ans.append(srv.prepare(tid,key,value))
-            print("PrepareLog"+srv.printPrepareLog())
+            #print("PrepareLog"+srv.printPrepareLog())
         if len(ans)==n:
             for res in ans:
                 if res==False:
@@ -118,6 +118,19 @@ class FrontendRPCServer:
         for serverId, rpcHandle in kvsServers.items():
             serverList.append(serverId)
         return serverList
+    
+    def getAllSums(self):
+        self.updateValidServers()
+        sums=[]
+        sumofsums=0
+        srvcount=0
+        for srvid,srv in kvsServers.items():
+            tempsum=srv.sumDict()
+            sums.append([srvid,tempsum])
+            sumofsums+=tempsum
+            srvcount+=1
+        return [str(sums), srvcount, sumofsums]
+
 
     ## shutdownServer: This function routes the shutdown request to
     ## a server matched with the specified serverId to let the corresponding

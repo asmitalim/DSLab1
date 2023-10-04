@@ -33,6 +33,15 @@ class KVSRPCServer:
         #return "[Server " + str(serverId) + "] Receive a request printing all KV pairs stored in this server"
         return "printKVPairs"+retval
     
+    def sumDict(self):
+        global localStore
+        retval=0
+        for key,val in localStore.items():
+            retval+=val
+        return retval
+
+
+    
     ## shutdownServer: Terminate the server itself normally.
     def shutdownServer(self):
         os._exit(1)
@@ -74,6 +83,8 @@ class KVSRPCServer:
             v=logs[2]
             localStore[k]= v
         return str(localStore)
+    
+    
     
 
             
