@@ -1,4 +1,4 @@
 #! /usr/bin/env bash
-ps -ef | grep server.py | grep -v grep | sed -e "s/   / /g" | sed -e "s/  / /g" | cut -d' ' -f2,9,11 | awk '{print "Server-" $3 " ,PID: " $1}'
-ps -ef | grep client.py | grep -v grep | sed -e "s/   / /g" | sed -e "s/  / /g" | cut -d' ' -f2,9,11 | awk '{print "Client-" $3 " ,PID: " $1}'
-ps -ef | grep frontend.py | grep -v grep | sed -e "s/   / /g" | sed -e "s/  / /g" | cut -d' ' -f2,9,11 | awk '{print "FrontEnd ,PID: " $1}'
+ps -eo pid,cmd | grep server.py | grep -v grep | sed "s/ \+/ /g" | cut -d' ' -f2,6 | awk '{print "Server-" $2 " ,PID: " $1}'
+ps -eo pid,cmd | grep client.py | grep -v grep | sed "s/ \+/ /g" | cut -d' ' -f2,6 | awk '{print "Client-" $2 " ,PID: " $1}'
+ps -eo pid,cmd | grep frontend.py | grep -v grep | sed "s/ \+/ /g" | cut -d' ' -f2,6 | awk '{print "Frontend" $2 " ,PID: " $1}'
