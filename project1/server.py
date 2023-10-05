@@ -20,6 +20,8 @@ class KVSRPCServer:
 
     ## get: Get the value associated with the given key.
     def get(self, key):
+        #return f"{key}:{key}"
+
         val=localStore.get(key,"ERR_KEY")
         #return "[Server " + str(serverId) + "] Receive a get request: " +str(key) +":"+str(val)
         return f"{key}:{val}"
@@ -50,6 +52,7 @@ class KVSRPCServer:
         return True
     
     def prepare(self,tid,key,value):
+        #return True
         global prepareLog
         try: 
             prepareLog["tid"]=tid
@@ -65,6 +68,7 @@ class KVSRPCServer:
         return str(prepareLog)
     
     def commit(self,tid,key,value):
+        #return True
         global prepareLog
         if prepareLog["tid"]==tid:
             self.put(key,value)

@@ -178,15 +178,25 @@ def event_trigger(k8s_client, k8s_apps_client, prefix):
 
 
 def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
+
     global randdict
     randdict={}
     iopscount=0
-    maxindx=100000
+    batchiop = 0 
+
     failpercent=10
-    starttime=time.time()
     terminate=False
     sum=0
     sumoflatencies=0
+
+    maxindx=100000
+    maxIopSample = 1000
+    maxTimeSec = 120
+
+
+    starttime=time.time()
+    batchstart = starttime
+
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
         val=randomint+1
@@ -196,14 +206,41 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
         latency=float(latency)
         sumoflatencies+=latency
         randdict[randomint]=val
+
         curtime=time.time()
         difftime=curtime-starttime
-        if iopscount%100==0:
-            print(f"Iopscount:{iopscount} Average latency(ms): {sumoflatencies*10:5.2f}")
+
+        if iopscount > 0 and iopscount%maxIopSample==0:
+            batchend = time.time()
+            batchtime = batchend - batchstart
+            batchstart = batchend
+            print(f"PUT: {difftime:6.0f} Iopscount:{iopscount} iops:{batchiop/batchtime:7.3f}  latency(ms): {sumoflatencies*1000/maxIopSample:5.2f}")
             sumoflatencies=0
-        if(curtime-starttime>10.00):
+            batchiop = 0
+
+        if(curtime-starttime > maxTimeSec):
             terminate=True
+
+
+
+
+
+
+
+
+
+
+
         iopscount+=1
+        batchiop += 1
+
+
+
+
+
+
+
+
     for key,val in randdict.items():
         sum+=val
     res=frontend.getAllSums()
@@ -212,16 +249,23 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
     return
 
 def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
+
     global randdict
     iopscount=0
     maxindx=100000
+    maxIopSample = 1000
+    maxTimeSec = 120
     failpercent=10
-    starttime=time.time()
     terminate=False
     sum=0
     errcount=0
     sumoflatencies=0
     count=0
+    batchIopCount = 0 
+
+    starttime=time.time()
+    batchstart = starttime
+
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
         strval=getdirect(randomint)
@@ -244,12 +288,21 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
 
         curtime=time.time()
         difftime=curtime-starttime
-        if iopscount%100==0:
-            print(f"Iopscount:{iopscount} Average latency(ms): {sumoflatencies*10:5.2f}")
+
+        if iopscount > 0 and iopscount%maxIopSample==0:
+            batchend = time.time()
+            batchdifftime = batchend - batchstart
+            print(f"GET: {difftime:6.0f} Iops:{iopscount} ioprate:{batchIopCount/batchdifftime:7.3f} latency(ms): {(sumoflatencies*1000/maxIopSample):5.3f}ms")
             sumoflatencies=0
-        if(curtime-starttime>10.00):
+            batchIopCount = 0
+            batchstart = batchend
+
+        if(curtime-starttime > maxTimeSec):
             terminate=True
+
         iopscount+=1
+        batchIopCount += 1
+
     #for key,val in randdict.items():
         #sum+=val
     print(f"Error count:{errcount} Success count {count} Loop counts: {iopscount}")

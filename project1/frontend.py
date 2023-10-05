@@ -80,6 +80,10 @@ class FrontendRPCServer:
     def put(self, key, value):
         global tid
         global lock
+
+        #return "put:"+str(key)+":"+str(value)+":"+str("1111.111")
+
+
         x0=time.time()
         with lock:
             tid+=1
@@ -124,6 +128,10 @@ class FrontendRPCServer:
         #self.updateValidServers()
         #serverId = key % len(kvsServers)
         #random_variable=key % len(kvsServers)
+
+        #return f"{key}:{key}" +  ":"  +   str("99999.9999")
+
+
         global lock
         with lock: 
             x0=time.time()
@@ -133,7 +141,7 @@ class FrontendRPCServer:
             #TODO: configure retries, lock
             retval=kvsServers[srvid].get(key)
             x1=time.time()
-            return retval+":"+str(x1-x0)
+            return str(retval)+":"+str(x1-x0)
 
     ## printKVPairs: This function routes requests to servers
     ## matched with the given serverIds.
