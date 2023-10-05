@@ -28,10 +28,10 @@ def updateMembership():
         with lock:
             srvstopop=[]
             for srvid,srv in kvsServers.items():
-                retrycount=4
+                retrycount=5
                 terminate=False
                 #socket.setdefaulttimeout(1)  
-                while(retrycount>=0 and terminate==False):
+                while(retrycount>0 and terminate==False):
                     try:
                         ans=srv.heartbeatfunction()
                         temp+=f",UP:{srvid}"
@@ -47,8 +47,8 @@ def updateMembership():
                 #socket.setdefaulttimeout(None)
             #for srvid in srvstopop:
                 #kvsServers.pop(srvid)
-            print("Heart beating!"+temp)
-        time.sleep(4)
+            #print("Heart beating!"+temp)
+        time.sleep(1)
 
 
 
@@ -80,38 +80,42 @@ class FrontendRPCServer:
     def put(self, key, value):
         global tid
         global lock
-        now = datetime.datetime.now()
-        #self.updateValidServers()
-        #if((now-self.timeSinceLastCheck).total_seconds()>1):
-            #self.updateValidServers()
-        #if len(upServers) > 0:
+        x0=time.time()
         with lock:
             tid+=1
-            flag=True
-            ans=[]
-            n=len(kvsServers)
             for s,srv in kvsServers.items():
-                ans.append(srv.prepare(tid,key,value))
-                #print("PrepareLog"+srv.printPrepareLog())
-            if len(ans)==n:
-                for res in ans:
-                    if res==False:
-                        flag=False
-            if flag==False or len(ans)!= n:
-                print("Put failed!")
-                return "ERR_PREPARE"
-
+                retrycount=5
+                terminate=False
+                while retrycount>0 and terminate==False:
+                    try:
+                        res=srv.prepare(tid,key,value)
+                        if res==False:
+                            return "ERR_PUT"
+                        terminate=True
+                    except:
+                        retrycount-=1
+                        if(retrycount==0):
+                            return "ERR_PUT"
+            srvstopop=[]
             for s,srv in kvsServers.items():
-                try:
-                    res=srv.commit(tid,key,value)
-                except:
-                    print("Dangerous system state, shutdown server")
-                    kvsServers.pop(s)
+                retrycount=5
+                terminate=False
+                while retrycount>0 and terminate==False:
+                    try:
+                        res=srv.commit(tid,key,value)
+                        terminate=True
+                        if(res==False):
+                            srvstopop.append(s)
+                    except:
+                        retrycount-=1
+                        if(retrycount==0):
+                            srvstopop.append(s)
+            for s in srvstopop:
+                kvsServers.pop(s)
             transactionLog.append((tid,key,value))
-        return "put:"+str(key)+":"+str(value)
-
-        #serverId = key % len(kvsServers)
-        #return kvsServers[serverId].put(key, value)
+            x1=time.time()
+            diff=x1-x0
+            return "put:"+str(key)+":"+str(value)+":"+str(diff)
 
     ## get: This function routes requests from clients to proper
     ## servers that are responsible for getting the value

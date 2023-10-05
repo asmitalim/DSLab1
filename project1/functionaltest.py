@@ -80,12 +80,25 @@ def shutdownServer(k8s_client, k8s_apps_client, serverId):
     print(result)
 
 def put(key, value):
-    clientList[random.randint(1, 100000) % len(clientList)].put(key, value)
-    #print(result)
+    result=clientList[random.randint(1, 100000) % len(clientList)].put(key, value)
+    return result
 
 def get(key):
     result = clientList[random.randint(1, len(clientList)) % len(clientList)].get(key)
     return result
+
+def putdirect(key, value):
+    x0=time.time()
+    result=frontend.put(key, value)
+    x1=time.time()
+    return result+":"+str(x1-x0)
+
+def getdirect(key):
+    x0=time.time()
+    result = frontend.get(key)
+    x1=time.time()
+    return result+":"+str(x1-x0)
+
 
 def printKVPairs(serverId):
     result = frontend.printKVPairs(serverId)
@@ -171,15 +184,21 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
     starttime=time.time()
     terminate=False
     sum=0
+    sumoflatencies=0
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
         val=randomint+1
-        put(randomint,val)
+        res=putdirect(randomint,val)
+        #print(f"Result of put: {res}")
+        latency=res.split(":")[4]
+        latency=float(latency)
+        sumoflatencies+=latency
         randdict[randomint]=val
         curtime=time.time()
         difftime=curtime-starttime
         if iopscount%100==0:
-            print(f"Iopscount:{iopscount}, Difftime:{difftime}")
+            print(f"Iopscount:{iopscount} Average latency(ms): {sumoflatencies*10:5.2f}")
+            sumoflatencies=0
         if(curtime-starttime>10.00):
             terminate=True
         iopscount+=1
@@ -187,7 +206,7 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
         sum+=val
     res=frontend.getAllSums()
     print(f"All sums: {res[0]} No of servers: {res[1]} Sums: {res[2]/res[1]} Local sum: {sum}")
-    print(f"Iops per second {iopscount/difftime}")
+    print(f"Iops per second {(iopscount/difftime):7.2f}")
     return
 
 def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
@@ -203,9 +222,9 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
     count=0
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
-        strval=get(randomint)
+        strval=getdirect(randomint)
         val=strval.split(":")[1]
-        latency=strval.split(":")[2]
+        latency=strval.split(":")[3]
         latency=float(latency)
         sumoflatencies+=latency
         if val=="ERR_KEY" and randomint in randdict:
@@ -224,7 +243,7 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
         curtime=time.time()
         difftime=curtime-starttime
         if iopscount%100==0:
-            print(f"Iopscount:{iopscount}, Difftime:{difftime} Average latence: {sumoflatencies/100}")
+            print(f"Iopscount:{iopscount} Average latency(ms): {sumoflatencies*10:5.2f}")
             sumoflatencies=0
         if(curtime-starttime>10.00):
             terminate=True
@@ -234,8 +253,9 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
     print(f"Error count:{errcount} Success count {count} Loop counts: {iopscount}")
     #res=frontend.getAllSums()
     #print(f"All sums: {res[0]} No of servers: {res[1]} Sums: {res[2]/res[1]} Local sum: {sum}")
-    print(f"Iops per second {iopscount/difftime}")
+    print(f"Iops per second {(iopscount/difftime):7.2f}")
     return
+
 
 
 
