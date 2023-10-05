@@ -199,11 +199,15 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
     terminate=False
     sum=0
     errcount=0
+    sumoflatencies=0
     count=0
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
         strval=get(randomint)
         val=strval.split(":")[1]
+        latency=strval.split(":")[2]
+        latency=float(latency)
+        sumoflatencies+=latency
         if val=="ERR_KEY" and randomint in randdict:
             print(f"Problem ide! Key:{randomint} Val:{strval}")
             errcount+=1
@@ -220,7 +224,8 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
         curtime=time.time()
         difftime=curtime-starttime
         if iopscount%100==0:
-            print(f"Iopscount:{iopscount}, Difftime:{difftime}")
+            print(f"Iopscount:{iopscount}, Difftime:{difftime} Average latence: {sumoflatencies/100}")
+            sumoflatencies=0
         if(curtime-starttime>10.00):
             terminate=True
         iopscount+=1

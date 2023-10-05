@@ -7,6 +7,7 @@ import socket
 import time
 import threading
 import random
+from threading import Thread
 
 kvsServers = dict() #all the servers which were allocated
 baseAddr = "http://localhost:"
@@ -20,6 +21,38 @@ lock = threading.Lock()
 class SimpleThreadedXMLRPCServer(ThreadingMixIn, SimpleXMLRPCServer):
         pass
 
+def updateMembership():
+    global lock
+    while True:
+        temp=f""
+        with lock:
+            srvstopop=[]
+            for srvid,srv in kvsServers.items():
+                retrycount=4
+                terminate=False
+                #socket.setdefaulttimeout(1)  
+                while(retrycount>=0 and terminate==False):
+                    try:
+                        ans=srv.heartbeatfunction()
+                        temp+=f",UP:{srvid}"
+                        terminate=True
+                        #print(f"{ans} from {srvid} \n")
+                    except:
+                        retrycount-=1
+                        print(f"Server {srvid}:{srv} unreachable Retrycount={retrycount}")
+                        if(retrycount==0):
+                            terminate=True
+                            srvstopop.append(srvid)
+                            temp+=f",DOWN:{srvid}"
+                #socket.setdefaulttimeout(None)
+            #for srvid in srvstopop:
+                #kvsServers.pop(srvid)
+            print("Heart beating!"+temp)
+        time.sleep(4)
+
+
+
+
 class FrontendRPCServer:
     timeSinceLastCheck=0
     # TODO: You need to implement details for these functions.
@@ -27,7 +60,7 @@ class FrontendRPCServer:
     ## put: This function routes requests from clients to proper
     ## servers that are responsible for inserting a new key-value
     ## pair or updating an existing one.
-    def updateValidServers(self):
+    def updateValidServers1(self):
     #returns a list of [srvids,srvs] which are up
     #TODO:make this a queue
         with lock:
@@ -46,8 +79,9 @@ class FrontendRPCServer:
         
     def put(self, key, value):
         global tid
+        global lock
         now = datetime.datetime.now()
-        self.updateValidServers()
+        #self.updateValidServers()
         #if((now-self.timeSinceLastCheck).total_seconds()>1):
             #self.updateValidServers()
         #if len(upServers) > 0:
@@ -73,7 +107,6 @@ class FrontendRPCServer:
                 except:
                     print("Dangerous system state, shutdown server")
                     kvsServers.pop(s)
-                    return "ERR_COMMIT"
             transactionLog.append((tid,key,value))
         return "put:"+str(key)+":"+str(value)
 
@@ -84,18 +117,24 @@ class FrontendRPCServer:
     ## servers that are responsible for getting the value
     ## associated with the given key.
     def get(self, key):
-        self.updateValidServers()
+        #self.updateValidServers()
         #serverId = key % len(kvsServers)
         #random_variable=key % len(kvsServers)
-        length=len(kvsServers)
-        random_variable=random.randint(1, length) % length
-        srvid=list(kvsServers)[random_variable]
-        return kvsServers[srvid].get(key)
+        global lock
+        with lock: 
+            x0=time.time()
+            length=len(kvsServers)
+            random_variable=random.randint(1, length) % length
+            srvid=list(kvsServers)[random_variable]
+            #TODO: configure retries, lock
+            retval=kvsServers[srvid].get(key)
+            x1=time.time()
+            return retval+":"+str(x1-x0)
 
     ## printKVPairs: This function routes requests to servers
     ## matched with the given serverIds.
     def printKVPairs(self, serverId):
-        self.updateValidServers()
+        #self.updateValidServers()
         return kvsServers[serverId].printKVPairs()
 
     ## addServer: This function registers a new server with the
@@ -110,14 +149,15 @@ class FrontendRPCServer:
     ## listServer: This function prints out a list of servers that
     ## are currently active/alive inside the cluster.
     def listServer(self):
-        self.updateValidServers()
+        #self.updateValidServers()
         serverList = []
-        for serverId, rpcHandle in kvsServers.items():
-            serverList.append(serverId)
+        with lock:
+            for serverId, rpcHandle in kvsServers.items():
+                serverList.append(serverId)
         return serverList
     
     def getAllSums(self):
-        self.updateValidServers()
+        #self.updateValidServers()
         sums=[]
         sumofsums=0
         srvcount=0
@@ -139,7 +179,8 @@ class FrontendRPCServer:
         except Exception as e:
             print(f"{e}")
         with lock:
-            kvsServers.pop(serverId)
+            if serverId in kvsServers:
+                kvsServers.pop(serverId)
         return "Server shutdown"
     
     def printTransactionLog(self):
@@ -148,5 +189,7 @@ class FrontendRPCServer:
 
 server = SimpleThreadedXMLRPCServer(("localhost", 8001),logRequests=False)
 server.register_instance(FrontendRPCServer())
-
+membershipthread=Thread(target=updateMembership, name="membershipThread")
+membershipthread.start()
 server.serve_forever()
+membershipthread.join()
