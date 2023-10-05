@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import os
 import subprocess
@@ -5,7 +7,7 @@ import time
 import random
 import xmlrpc.client
 
-from shared import util
+#from shared import util
 
 baseAddr = "http://localhost:"
 baseClientPort = 7000
