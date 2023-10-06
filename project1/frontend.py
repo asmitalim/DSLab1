@@ -86,6 +86,8 @@ class FrontendRPCServer:
 
         x0=time.time()
         with lock:
+            if(len(kvsServers)==0):
+                return "ERR_NOSERVERS"
             tid+=1
             for s,srv in kvsServers.items():
                 retrycount=5
@@ -119,7 +121,7 @@ class FrontendRPCServer:
             transactionLog.append((tid,key,value))
             x1=time.time()
             diff=x1-x0
-            return "put:"+str(key)+":"+str(value)+":"+str(diff)
+            return str(key)+":"+str(value)+":"+str(diff)
 
     ## get: This function routes requests from clients to proper
     ## servers that are responsible for getting the value
@@ -136,12 +138,18 @@ class FrontendRPCServer:
         with lock: 
             x0=time.time()
             length=len(kvsServers)
+            if length==0:
+                return "ERR_NOSERVERS"
             random_variable=random.randint(1, length) % length
             srvid=list(kvsServers)[random_variable]
             #TODO: configure retries, lock
-            retval=kvsServers[srvid].get(key)
+            try: 
+                retval=kvsServers[srvid].get(key)
+            except:
+                return "ERR_NOEXIST"
             x1=time.time()
-            return str(retval)+":"+str(x1-x0)
+            #return str(retval)+":"+str(x1-x0)
+            return str(retval)
 
     ## printKVPairs: This function routes requests to servers
     ## matched with the given serverIds.
@@ -162,10 +170,17 @@ class FrontendRPCServer:
     ## are currently active/alive inside the cluster.
     def listServer(self):
         #self.updateValidServers()
-        serverList = []
+        serverList = ""
+        count=0
         with lock:
-            for serverId, rpcHandle in kvsServers.items():
-                serverList.append(serverId)
+            for serverId, rpcHandle in sorted(kvsServers.items()):
+                if(count==0):
+                    serverList+=str(serverId)
+                else:
+                    serverList+=", "+str(serverId)
+                count+=1
+        if count==0:
+            return "ERR_NOSERVERS"
         return serverList
     
     def getAllSums(self):

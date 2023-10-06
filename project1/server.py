@@ -21,19 +21,25 @@ class KVSRPCServer:
     ## get: Get the value associated with the given key.
     def get(self, key):
         #return f"{key}:{key}"
-
         val=localStore.get(key,"ERR_KEY")
+        if(val=="ERR_KEY"):
+            return val
         #return "[Server " + str(serverId) + "] Receive a get request: " +str(key) +":"+str(val)
         return f"{key}:{val}"
 
     ## printKVPairs: Print all the key-value pairs at this server.
     def printKVPairs(self):
         global localStore
-        retval=f"ListKVPairs: Server:{serverId} "
+        retval=f""
+        count=0
         for key,val in localStore.items():
-            retval+=f"{key}:{val}\n"
+            if(count==0):
+                retval+=f"{key}:{val}"
+            else:
+                retval+=f"\n{key}:{val}"
+            count+=1
         #return "[Server " + str(serverId) + "] Receive a request printing all KV pairs stored in this server"
-        return "printKVPairs"+retval
+        return retval
     
     def sumDict(self):
         global localStore
