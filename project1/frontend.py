@@ -191,7 +191,8 @@ class FrontendRPCServer:
         for srvid,srv in kvsServers.items():
             tempsum=srv.sumDict()
             sums.append([srvid,tempsum])
-            sumofsums+=tempsum
+            #sumofsums+=tempsum
+            sumofsums ^=tempsum
             srvcount+=1
         return [str(sums), srvcount, sumofsums]
 

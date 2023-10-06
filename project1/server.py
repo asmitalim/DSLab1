@@ -45,7 +45,8 @@ class KVSRPCServer:
         global localStore
         retval=0
         for key,val in localStore.items():
-            retval+=val
+            #retval+=val
+            retval ^= val
         return retval
 
 
