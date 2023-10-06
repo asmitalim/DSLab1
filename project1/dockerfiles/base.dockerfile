@@ -9,12 +9,22 @@ ENV TZ=Etc/UTC
 
 RUN apt-get update && apt-get install -y git
 
+WORKDIR /
+
 RUN git clone https://github.com/vijay03/cs380d-f23.git
 
 ENV KVS_HOME /cs380d-f23/project1
 
+WORKDIR ${KVS_HOME}
+
+COPY server.py .
+
+COPY frontend.py .
+
 # Install dependencies
 WORKDIR ${KVS_HOME}/scripts
+
 RUN bash dependencies2.sh
 
-WORKDIR /
+WORKDIR ${KVS_HOME}
+

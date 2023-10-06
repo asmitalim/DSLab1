@@ -1,6 +1,6 @@
-FROM sekwonlee/kvs:base
+FROM asmital/dslab1:base
 
-MAINTAINER Sekwon Lee <sklee@cs.utexas.edu> version: 0.1
+MAINTAINER Asmita <asmita@utexas.edu> version: 0.1
 
 USER root
 
