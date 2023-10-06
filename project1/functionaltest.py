@@ -191,7 +191,7 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
 
     maxindx=100000
     maxIopSample = 1000
-    maxTimeSec = 120
+    maxTimeSec = 50
 
 
     starttime=time.time()
@@ -202,7 +202,7 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
         val=randomint+1
         res=putdirect(randomint,val)
         #print(f"Result of put: {res}")
-        latency=res.split(":")[4]
+        latency=res.split(":")[3]
         latency=float(latency)
         sumoflatencies+=latency
         randdict[randomint]=val
@@ -242,7 +242,9 @@ def runfunctionaltest(k8s_client, k8s_apps_client, prefix):
 
 
     for key,val in randdict.items():
-        sum+=val
+        #sum+=val
+        sum ^= val
+
     res=frontend.getAllSums()
     print(f"All sums: {res[0]} No of servers: {res[1]} Sums: {res[2]/res[1]} Local sum: {sum}")
     print(f"Iops per second {(iopscount/difftime):7.2f}")
@@ -254,12 +256,12 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
     iopscount=0
     maxindx=100000
     maxIopSample = 1000
-    maxTimeSec = 120
+    maxTimeSec = 50
     failpercent=10
     terminate=False
     sum=0
     errcount=0
-    sumoflatencies=0
+    sumoflatencies=0.0
     count=0
     batchIopCount = 0 
 
@@ -268,11 +270,27 @@ def runfunctionaltest2(k8s_client, k8s_apps_client, prefix):
 
     while terminate != True and iopscount<maxindx*4:
         randomint=random.randint(0,maxindx-1)
+
         strval=getdirect(randomint)
+
+        if "ERR_KEY" in strval:
+            val = "ERR_KEY"
+            latency = strval.split(":")[1]
+        else:
+            k = strval.split(":")[0]
+            val = strval.split(":")[1]
+            latency = strval.split(":")[2]
+
+
+
+        '''
         val=strval.split(":")[1]
         latency=strval.split(":")[3]
         latency=float(latency)
-        sumoflatencies+=latency
+        '''
+
+        sumoflatencies+=float(latency)
+
         if val=="ERR_KEY" and randomint in randdict:
             print(f"Problem ide! Key:{randomint} Val:{strval}")
             errcount+=1
