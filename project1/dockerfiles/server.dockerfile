@@ -6,4 +6,6 @@ USER root
 
 WORKDIR $KVS_HOME
 
+COPY server.py .
+
 CMD python3 server.py -i $SERVER_ID

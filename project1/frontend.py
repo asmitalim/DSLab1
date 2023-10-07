@@ -175,10 +175,11 @@ class FrontendRPCServer:
         random_variable=random.randint(1, length) % length
         srvid=list(copyservers)[random_variable]
         with keylock:
-            retrycount=20
+            retrycount=100
             terminate=False
             while retrycount>0 and terminate==False:
                 try:
+                    time.sleep((100-retrycount)*0.01)
                     retval=copyservers[srvid].get(key)
                     terminate=True
                 except:
@@ -187,7 +188,7 @@ class FrontendRPCServer:
                     srvid=list(copyservers)[random_variable]
                     if(retrycount==0):
                         terminate=False
-                        return f"ERR_NOEXIST+{srvid}"
+                        return f"ERR_NOEXIST"
         x1=time.time()
         return str(retval)+":"+str(x1-x0)
         #return str(retval)

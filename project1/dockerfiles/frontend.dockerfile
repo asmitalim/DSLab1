@@ -6,4 +6,6 @@ USER root
 
 WORKDIR $KVS_HOME
 
+COPY frontend.py .
+
 CMD python3 frontend.py
