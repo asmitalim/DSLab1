@@ -10,6 +10,7 @@ import random
 from threading import Thread
 
 kvsServers = dict() #all the servers which were allocated
+perKeyLock=dict()
 baseAddr = "http://localhost:"
 baseServerPort = 9000
 #upServers=[] #list of serverIds which are reachable and valid
@@ -28,27 +29,28 @@ def updateMembership():
         with lock:
             srvstopop=[]
             for srvid,srv in kvsServers.items():
-                retrycount=5
-                terminate=False
-                #socket.setdefaulttimeout(1)  
+                retrycount=20
+                terminate=False 
                 while(retrycount>0 and terminate==False):
                     try:
+                        #socket.setdefaulttimeout(0.01) 
+                        time.sleep((20-retrycount)*0.01)
                         ans=srv.heartbeatfunction()
+                        #socket.setdefaulttimeout(None)
                         temp+=f",UP:{srvid}"
                         terminate=True
                         #print(f"{ans} from {srvid} \n")
                     except:
                         retrycount-=1
-                        print(f"Server {srvid}:{srv} unreachable Retrycount={retrycount}")
+                        #print(f"Server {srvid}:{srv} unreachable Retrycount={retrycount}")
                         if(retrycount==0):
                             terminate=True
                             srvstopop.append(srvid)
                             temp+=f",DOWN:{srvid}"
-                #socket.setdefaulttimeout(None)
-            #for srvid in srvstopop:
-                #kvsServers.pop(srvid)
+            for srvid in srvstopop:
+                kvsServers.pop(srvid)
             #print("Heart beating!"+temp)
-        time.sleep(1)
+        time.sleep(3)
 
 
 
@@ -80,48 +82,72 @@ class FrontendRPCServer:
     def put(self, key, value):
         global tid
         global lock
+        global perKeyLock
 
         #return "put:"+str(key)+":"+str(value)+":"+str("1111.111")
 
-
+        #perkeylock
+        #increasing timeout
+        #no return from put except ERR_NOSERVERS
+        #maximum timeout
         x0=time.time()
+
         with lock:
             if(len(kvsServers)==0):
                 return "ERR_NOSERVERS"
+            copyservers=kvsServers.copy()
             tid+=1
-            for s,srv in kvsServers.items():
-                retrycount=5
+
+        '''for s,srv in copyservers.items():
+            retrycount=5
+            terminate=False
+            while retrycount>0 and terminate==False:
+                try:
+                    res=srv.prepare(tid,key,value)
+                    if res==False:
+                        return "ERR_PUT"
+                    terminate=True
+                except:
+                    retrycount-=1
+                    if(retrycount==0):
+                        return "ERR_PUT"
+        srvstopop=[]
+        for s,srv in copyservers.items():
+            retrycount=5
+            terminate=False
+            while retrycount>0 and terminate==False:
+                try:
+                    res=srv.commit(tid,key,value)
+                    terminate=True
+                    if(res==False):
+                        srvstopop.append(s)
+                except:
+                    retrycount-=1
+                    if(retrycount==0):
+                        srvstopop.append(s)'''
+        if key in perKeyLock:
+            keylock=perKeyLock[key]
+        else:
+            perKeyLock[key]=threading.Lock()
+            keylock=perKeyLock[key]
+        if(keylock==None):
+            return "Key lock does not exist!!"
+        with keylock:
+            for s,srv in copyservers.items():
+                retrycount=100
                 terminate=False
                 while retrycount>0 and terminate==False:
                     try:
-                        res=srv.prepare(tid,key,value)
-                        if res==False:
-                            return "ERR_PUT"
+                        srv.put(key,value)
                         terminate=True
                     except:
                         retrycount-=1
                         if(retrycount==0):
-                            return "ERR_PUT"
-            srvstopop=[]
-            for s,srv in kvsServers.items():
-                retrycount=5
-                terminate=False
-                while retrycount>0 and terminate==False:
-                    try:
-                        res=srv.commit(tid,key,value)
-                        terminate=True
-                        if(res==False):
-                            srvstopop.append(s)
-                    except:
-                        retrycount-=1
-                        if(retrycount==0):
-                            srvstopop.append(s)
-            for s in srvstopop:
-                kvsServers.pop(s)
-            transactionLog.append((tid,key,value))
-            x1=time.time()
-            diff=x1-x0
-            return str(key)+":"+str(value)+":"+str(diff)
+                            terminate=False
+        transactionLog.append((tid,key,value))
+        x1=time.time()
+        diff=x1-x0
+        return str(key)+":"+str(value)+":"+str(diff)
 
     ## get: This function routes requests from clients to proper
     ## servers that are responsible for getting the value
@@ -135,27 +161,45 @@ class FrontendRPCServer:
 
 
         global lock
+        global perKeyLock
         with lock: 
-            x0=time.time()
-            length=len(kvsServers)
-            if length==0:
-                return "ERR_NOSERVERS"
-            random_variable=random.randint(1, length) % length
-            srvid=list(kvsServers)[random_variable]
-            #TODO: configure retries, lock
-            try: 
-                retval=kvsServers[srvid].get(key)
-            except:
-                return "ERR_NOEXIST"
-            x1=time.time()
-            #return str(retval)+":"+str(x1-x0)
-            return str(retval)
+            copyservers=kvsServers.copy()
+        if key in perKeyLock:
+            keylock=perKeyLock[key]
+        else:
+            return "ERR_KEY"
+        x0=time.time()
+        length=len(copyservers)
+        if length==0:
+            return "ERR_NOSERVERS"
+        random_variable=random.randint(1, length) % length
+        srvid=list(copyservers)[random_variable]
+        with keylock:
+            retrycount=20
+            terminate=False
+            while retrycount>0 and terminate==False:
+                try:
+                    retval=copyservers[srvid].get(key)
+                    terminate=True
+                except:
+                    retrycount-=1
+                    random_variable=random.randint(1, length) % length
+                    srvid=list(copyservers)[random_variable]
+                    if(retrycount==0):
+                        terminate=False
+                        return f"ERR_NOEXIST+{srvid}"
+        x1=time.time()
+        return str(retval)+":"+str(x1-x0)
+        #return str(retval)
 
     ## printKVPairs: This function routes requests to servers
     ## matched with the given serverIds.
     def printKVPairs(self, serverId):
         #self.updateValidServers()
-        return kvsServers[serverId].printKVPairs()
+        if(serverId in kvsServers):
+            return kvsServers[serverId].printKVPairs()
+        else:
+            return "ERR_NOEXIST"
 
     ## addServer: This function registers a new server with the
     ## serverId to the cluster membership.
